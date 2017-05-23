@@ -13,25 +13,25 @@
 ;; Page
 
 (defn loginform []
-  (let [input-text (:input-text @mydb/app-store)
-        name (:user @mydb/app-store)]
+  (let [input-text (:input-text @mydb/tmp-store)
+        mgs @mydb/action-store]
     [:div.col-sm-2 
      [:input  
       {:id "my-input-box"   
        :type "text"   
        :value input-text   
        :onChange (fn [_]               
-                   (let [v (.-value (gdom/getElement "my-input-box"))]                 
-                     (.log js/console "change something!!!: " v)  
-                     (swap! mydb/app-store assoc :input-text v)))}] 
+                   (let [v (.-value (gdom/getElement "my-input-box"))]
+                     (.log js/console "change something!!!: " v)
+                     (swap! mydb/tmp-store assoc :input-text v)))}]
      [:button#btn-login  
-      {:type "button"   
-       :onClick (fn []              
-                  (.log js/console "logging in!!!")
-                  (events/user-login input-text))}  
-      "Secure login!"] 
+      {:type    "button"
+       :onClick (fn []
+                  (.log js/console "sending a message!!!")
+                  (events/send-message input-text))}
+      "Send a message!"]
      [:div (str "input text: " input-text)] 
-     [:div (str "user name: " name)]]))
+     [:div (str "msgs: " mgs)]]))
         
 
 (defn page []

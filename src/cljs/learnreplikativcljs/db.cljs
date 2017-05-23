@@ -15,38 +15,41 @@
 (def ormap-id #uuid "7d274663-9396-4247-910b-409ae35fe98d")
 (def uri "ws://127.0.0.1:31744")
 
+(defonce action-store (r/atom {}))
+(defonce tmp-store (r/atom {}))
 (declare client-state)
 
 ;; Stream function 
-(def stream-eval-fns
-  {'assoc (fn [a new]     
-              (swap! a assoc (uuid new) new)          
-              a) 
-   'dissoc (fn [a new]           
-             (swap! a dissoc (uuid new))           
-             a)
-   'changUser (fn [a new]
-                (swap! a assoc :user new))})
+(def eval-fnstream-eval-fns {'assoc (fn [old v]
+                                      (swap! old assoc (uuid v) v)
+                                      old)
+                             'dissoc (fn [old v]
+                                       (swap! old dissoc (uuid v))
+                                       old)})
 
-(defn changeUser! [newname]
-  (s/assoc! (:stage client-state)
-    [user ormap-id]
-    (uuid newname)
-    [['changUser newname]]))
+(defn sendMessage! [rawmsg]
+  (let [msg {:msg rawmsg
+             :inst (.getTime (js/Date.))}]
+    (s/assoc! (:stage client-state)
+              [user ormap-id]
+              (uuid msg)
+              [['assoc msg]])))
 
-(defonce app-store (r/atom {:user "thinh"
-                            :input-text "sample text"}))
+(defn handle-changes []
+  (.log js/console (str "app-store: " @action-store)))
+
+(add-watch action-store :key #(handle-changes))
 
 (defn setup-replikativ []
   (go-try S
     (let [local-store (<? S (new-mem-store))
           local-peer (<? S (client-peer S local-store))
           stage (<? S (create-stage! user local-peer))
-          stream (stream-into-identity! 
+          stream (stream-into-identity!
                    stage
                    [user ormap-id]
-                   stream-eval-fns
-                   app-store)]
+                   eval-fnstream-eval-fns
+                   action-store)]
       (<? S (s/create-ormap! stage :description "all datas" :id ormap-id))
       (connect! stage uri)
       {:store local-store
